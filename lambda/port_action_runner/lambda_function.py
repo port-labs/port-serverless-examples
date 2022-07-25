@@ -20,6 +20,14 @@ CREATE_TRIGGER = 'CREATE'
 API_URL = 'https://api.getport.io/v0.1'
 
 
+def convert_status_code_to_run_status(status_code: int):
+    if 200 <= status_code < 300:
+        return "SUCCESS"
+    if status_code >= 400:
+        return "FAILURE"
+    return "IN_PROGRESS"
+
+
 def get_port_api_token():
     '''
     Get a Port API access token
@@ -64,6 +72,37 @@ def report_to_port(entity_props: dict):
     logger.info(response.status_code)
     logger.info(json.dumps(response.json()))
 
+    return response.status_code
+
+
+def report_action_status(run_context: dict, status: str):
+    '''
+    Reports to Port on the status of an action run ``entity_props``
+    '''
+    logger.info('Fetching token')
+    token = get_port_api_token()
+
+    headers = {
+        'Authorization': f'Bearer {token}'
+    }
+
+    run_id = run_context['runId']
+
+    body = {
+        "status": status,
+        "message": {
+            "message": f"The action status is ${status}"
+        }
+    }
+
+    logger.info('Reporting action status:')
+    logger.info(json.dumps(body))
+    response = requests.patch(f'{API_URL}/actions/runs/${run_id}', json=body, headers=headers)
+    logger.info(response.status_code)
+    logger.info(json.dumps(response.json()))
+
+    return response.status_code
+
 
 def lambda_handler(event, context):
     '''
@@ -92,7 +131,8 @@ def lambda_handler(event, context):
 
                 # All of the input fields you specified in the action invocation are available under message['payload']['properties']
                 # For this example, we are simply invoking a simple reporter function which will send data about the new entity to Port
-                report_to_port(message['payload']['properties'])
+                status_code = report_to_port(message['payload']['properties'])
+                report_action_status(message['context'], convert_status_code_to_run_status(status_code))
             except Exception as e:
                 traceback.print_exc()
                 logger.warn(f'Error: {e}')
