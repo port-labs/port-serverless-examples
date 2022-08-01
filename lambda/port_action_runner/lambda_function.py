@@ -42,7 +42,7 @@ def get_port_api_token():
     return access_token
 
 
-def report_to_port(entity_props: dict):
+def report_to_port(run_id: str ,entity_props: dict):
     '''
     Reports to Port on a new entity based on provided ``entity_props``
     '''
@@ -51,6 +51,10 @@ def report_to_port(entity_props: dict):
 
     headers = {
         'Authorization': f'Bearer {token}'
+    }
+
+    params = {
+      'run_id': run_id
     }
 
     entity = {
@@ -68,7 +72,7 @@ def report_to_port(entity_props: dict):
 
     logger.info('Creating entity:')
     logger.info(json.dumps(entity))
-    response = requests.post(f'{API_URL}/entities', json=entity, headers=headers)
+    response = requests.post(f'{API_URL}/entities', json=entity, headers=headers, params=params)
     logger.info(response.status_code)
     logger.info(json.dumps(response.json()))
 
@@ -91,13 +95,13 @@ def report_action_status(run_context: dict, status: str):
     body = {
         "status": status,
         "message": {
-            "message": f"The action status is ${status}"
+            "message": f"The action status is {status}"
         }
     }
 
-    logger.info('Reporting action status:')
+    logger.info(f'Reporting action {run_id} status:')
     logger.info(json.dumps(body))
-    response = requests.patch(f'{API_URL}/actions/runs/${run_id}', json=body, headers=headers)
+    response = requests.patch(f'{API_URL}/actions/runs/{run_id}', json=body, headers=headers)
     logger.info(response.status_code)
     logger.info(json.dumps(response.json()))
 
@@ -119,6 +123,8 @@ def lambda_handler(event, context):
                 logger.info(message_json_string)
                 message = json.loads(message_json_string)
 
+                run_id = message['context']['runId']
+
                 # "message" includes one execution invocation object
                 # You can use the message object as shown here to filter the handling of different actions you configured in Port
                 action_type = message['payload']['action']['trigger']
@@ -131,8 +137,8 @@ def lambda_handler(event, context):
 
                 # All of the input fields you specified in the action invocation are available under message['payload']['properties']
                 # For this example, we are simply invoking a simple reporter function which will send data about the new entity to Port
-                status_code = report_to_port(message['payload']['properties'])
-                report_action_status(message['context'], convert_status_code_to_run_status(status_code))
+                status_code = report_to_port(run_id, message['payload']['properties'])
+                report_action_status(run_id, convert_status_code_to_run_status(status_code))
             except Exception as e:
                 traceback.print_exc()
                 logger.warn(f'Error: {e}')
