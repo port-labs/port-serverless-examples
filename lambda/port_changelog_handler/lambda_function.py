@@ -18,21 +18,20 @@ CLIENT_SECRET = os.environ['PORT_CLIENT_SECRET']
 
 CREATE_TRIGGER = 'CREATE'
 
-API_URL = 'https://api.getport.io/v0.1'
+API_URL = 'https://api.getport.io/v1'
 
 
 def get_port_api_token():
-    '''
+    """
     Get a Port API access token
+    This function uses CLIENT_ID and CLIENT_SECRET from config
+    """
 
-    This function uses a global ``CLIENT_ID`` and ``CLIENT_SECRET``
-    '''
-    credentials = {'client_id': CLIENT_ID, 'client_secret': CLIENT_SECRET}
+    credentials = {'clientId': CLIENT_ID, 'clientSecret': CLIENT_SECRET}
 
-    token_response = requests.get(f'{API_URL}/auth/access_token', params=credentials)
-    access_token = token_response.json()['accessToken']
+    token_response = requests.post(f"{API_URL}/auth/access_token", json=credentials)
 
-    return access_token
+    return token_response.json()['accessToken']
 
 
 def update_entity_prop_value(blueprint_identifier: str, identifier: str, property_name: str, property_value: Union[str, int]):

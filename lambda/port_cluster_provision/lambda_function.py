@@ -18,7 +18,7 @@ CLIENT_SECRET = os.environ['PORT_CLIENT_SECRET']
 CREATE_TRIGGER = 'CREATE'
 UPDATE_TRIGGER = 'DAY-2'
 
-API_URL = 'https://api.getport.io/v0.1'
+API_URL = 'https://api.getport.io/v1'
 
 
 def convert_status_code_to_run_status(status_code: int):
@@ -30,17 +30,16 @@ def convert_status_code_to_run_status(status_code: int):
 
 
 def get_port_api_token():
-    '''
+    """
     Get a Port API access token
+    This function uses CLIENT_ID and CLIENT_SECRET from config
+    """
 
-    This function uses a global ``CLIENT_ID`` and ``CLIENT_SECRET``
-    '''
-    credentials = {'client_id': CLIENT_ID, 'client_secret': CLIENT_SECRET}
+    credentials = {'clientId': CLIENT_ID, 'clientSecret': CLIENT_SECRET}
 
-    token_response = requests.get(f'{API_URL}/auth/access_token', params=credentials)
-    access_token = token_response.json()['accessToken']
+    token_response = requests.post(f"{API_URL}/auth/access_token", json=credentials)
 
-    return access_token
+    return token_response.json()['accessToken']
 
 
 def report_to_port(entity_props: dict):
@@ -54,10 +53,11 @@ def report_to_port(entity_props: dict):
         'Authorization': f'Bearer {token}'
     }
 
+    blueprint = 'k8sCluster'
+
     entity = {
         'identifier': entity_props['title'].replace(' ', '-').lower(),
         'title': entity_props['title'],
-        'blueprint': 'k8sCluster',
         'properties': {
             'version': entity_props['version'],
             'type': entity_props['type']
@@ -69,7 +69,7 @@ def report_to_port(entity_props: dict):
 
     logger.info('Creating entity:')
     logger.info(json.dumps(entity))
-    response = requests.post(f'{API_URL}/entities', json=entity, headers=headers)
+    response = requests.post(f'{API_URL}/blueprints/{blueprint}/entities', json=entity, headers=headers)
     logger.info(response.status_code)
     logger.info(json.dumps(response.json()))
 
@@ -87,6 +87,8 @@ def update_cluster_in_port(entity_props: dict, entity_identifier: str):
         'Authorization': f'Bearer {token}'
     }
 
+    blueprint = 'k8sCluster'
+
     entity = {
         'properties': {
             'version': entity_props['version']
@@ -95,7 +97,7 @@ def update_cluster_in_port(entity_props: dict, entity_identifier: str):
 
     logger.info('Updating entity:')
     logger.info(json.dumps(entity))
-    response = requests.patch(f'{API_URL}/entities/{entity_identifier}', json=entity, headers=headers)
+    response = requests.patch(f'{API_URL}/blueprints/{blueprint}/entities/{entity_identifier}', json=entity, headers=headers)
     logger.info(response.status_code)
     logger.info(json.dumps(response.json()))
 

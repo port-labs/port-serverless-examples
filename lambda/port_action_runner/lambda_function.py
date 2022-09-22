@@ -17,7 +17,7 @@ CLIENT_SECRET = os.environ['PORT_CLIENT_SECRET']
 
 CREATE_TRIGGER = 'CREATE'
 
-API_URL = 'https://api.getport.io/v0.1'
+API_URL = 'https://api.getport.io/v1'
 
 
 def convert_status_code_to_run_status(status_code: int):
@@ -29,20 +29,19 @@ def convert_status_code_to_run_status(status_code: int):
 
 
 def get_port_api_token():
-    '''
+    """
     Get a Port API access token
+    This function uses CLIENT_ID and CLIENT_SECRET from config
+    """
 
-    This function uses a global ``CLIENT_ID`` and ``CLIENT_SECRET``
-    '''
-    credentials = {'client_id': CLIENT_ID, 'client_secret': CLIENT_SECRET}
+    credentials = {'clientId': CLIENT_ID, 'clientSecret': CLIENT_SECRET}
 
-    token_response = requests.get(f'{API_URL}/auth/access_token', params=credentials)
-    access_token = token_response.json()['accessToken']
+    token_response = requests.post(f"{API_URL}/auth/access_token", json=credentials)
 
-    return access_token
+    return token_response.json()['accessToken']
 
 
-def report_to_port(run_id: str ,entity_props: dict):
+def report_to_port(run_id: str, entity_props: dict):
     '''
     Reports to Port on a new entity based on provided ``entity_props``
     '''
@@ -56,7 +55,7 @@ def report_to_port(run_id: str ,entity_props: dict):
     }
 
     params = {
-      'run_id': run_id
+        'run_id': run_id
     }
 
     entity = {
